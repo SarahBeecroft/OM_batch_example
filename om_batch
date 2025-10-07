@@ -25,9 +25,9 @@ CHUNK_SIZE=128
 # Avoid editing below this line #
 #===============================#
 
-# Create log and output dirs
-mkdir -p ${LOGS_DIR}
-mkdir -p ${OUTPUT_DIR}
+# Create log and output dirs- optional 
+#mkdir -p ${LOGS_DIR}
+#mkdir -p ${OUTPUT_DIR}
 
 # Read PARAMS list
 mapfile -t PARAMS < $PARAMS_LIST
