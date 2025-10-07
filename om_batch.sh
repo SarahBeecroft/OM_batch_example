@@ -3,10 +3,10 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=128
 #SBATCH --ntasks=1
-#SBATCH --time=4:00:00
+#SBATCH --time=1:00:00
 #SBATCH --partition=work
 #SBATCH --exclusive
-#SBATCH --account=$PAWSEYPROJECT
+#SBATCH --account=pawsey0012
 #SBATCH --mem=0
 
 set -euo pipefail
@@ -15,7 +15,7 @@ module load singularity/3.11.4-nompi
 
 # Configuration - UPDATE WITH PATHS TO NECESSARY FILES/INSTALLS
 # OM_PATH=
-# LOGS_DIR=
+LOGS_DIR=logs/wait
 # OUTPUT_DIR=
 
 # Calculate batch size based on node capacity
@@ -27,7 +27,7 @@ CHUNK_SIZE=128
 #===============================#
 
 # Create log and output dirs- optional 
-#mkdir -p ${LOGS_DIR}
+mkdir -p ${LOGS_DIR}
 #mkdir -p ${OUTPUT_DIR}
 
 # Read PARAMS list
@@ -40,11 +40,11 @@ echo "Processing ${TOTAL_PARAMS} params in chunks of ${CHUNK_SIZE}..."
 
 # Process params in chunks of 128 at a time
 for ((i=0; i<${TOTAL_PARAMS}; i+=CHUNK_SIZE)); do
-    BATCH_NUM=$((i/BATCH_SIZE + 1))
-    echo "Starting batch ${BATCH_NUM}..."
+    CHUNK_NUM=$((i/CHUNK_SIZE + 1))
+    echo "Starting batch ${CHUNK_NUM}..."
     
     # Launch one batch of PARAMs
-    for ((j=i; j<i+BATCH_SIZE && j<${TOTAL_PARAMS}; j++)); do
+    for ((j=i; j<i+CHUNK_SIZE && j<${TOTAL_PARAMS}; j++)); do
         PARAM=${PARAMS_ARRAY[$j]}
         echo "Launching param ${PARAM} ($(($j+1))/${TOTAL_PARAMS})" \        
         srun --ntasks=1 \
@@ -53,16 +53,15 @@ for ((i=0; i<${TOTAL_PARAMS}; i+=CHUNK_SIZE)); do
             --output=${LOGS_DIR}/%j_${PARAM}.log \
             --error=${LOGS_DIR}/%j_${PARAM}.log \
             bash -c "
-            echo 'Processing param ${PARAM}' && \
-            OM CODE GOES HERE && \
+            echo 'Processing param ${PARAM} on ${SLURM_NODEID}' && \
+            sleep 120 && \
             echo 'OM completed for param ${PARAM}' 
             " &
     done
-    
-    # Wait for this batch to complete before starting next
-    echo "  Waiting for batch ${BATCH_NUM} to complete..."
     wait
-    echo "  Batch ${BATCH_NUM} complete!"
+    # Wait for this batch to complete before starting next
+    echo "  Waiting for batch ${CHUNK_NUM} to complete..."
+    echo "  Batch ${CHUNK_NUM} complete!"
 done
 
 # Quick summary
