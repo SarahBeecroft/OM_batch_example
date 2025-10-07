@@ -1,0 +1,70 @@
+#!/bin/bash -l
+#SBATCH --job-name=openmalaria
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=1
+#SBATCH --time=4:00:00
+#SBATCH --partition=work
+#SBATCH --exclusive
+#SBATCH --account=$PAWSEYPROJECT
+#SBATCH --mem=0
+
+set -euo pipefail
+
+module load singularity/3.11.4-nompi
+
+# Configuration - UPDATE WITH PATHS TO NECESSARY FILES/INSTALLS
+# OM_PATH=
+# LOGS_DIR=
+# OUTPUT_DIR=
+
+# Calculate batch size based on node capacity
+# For work nodes, estimate that 128 jobs can run concurrently
+BATCH_SIZE=128
+
+#===============================#
+# Avoid editing below this line #
+#===============================#
+
+# Create log and output dirs
+mkdir -p ${LOGS_DIR}
+mkdir -p ${OUTPUT_DIR}
+
+# Read sample list
+mapfile -t SAMPLES < $SAMPLE_LIST
+
+SAMPLES_ARRAY=("${SAMPLES[@]}")
+TOTAL_SAMPLES=${#SAMPLES_ARRAY[@]}
+
+echo "Processing ${TOTAL_SAMPLES} samples in batches of ${BATCH_SIZE}..."
+
+# Process samples in batches
+for ((i=0; i<${TOTAL_SAMPLES}; i+=BATCH_SIZE)); do
+    BATCH_NUM=$((i/BATCH_SIZE + 1))
+    echo "Starting batch ${BATCH_NUM}..."
+    
+    # Launch one batch of samples
+    for ((j=i; j<i+BATCH_SIZE && j<${TOTAL_SAMPLES}; j++)); do
+        SAMPLE=${SAMPLES_ARRAY[$j]}
+        echo "Launching sample ${SAMPLE} ($(($j+1))/${TOTAL_SAMPLES})" \        
+        srun --nodes=1 \
+            --ntasks=1 \
+            --cpus-per-task=1 \
+            --mem=2GB \
+            --output=${LOGS_DIR}/%j_${SAMPLE}.log \
+            --error=${LOGS_DIR}/%j_${SAMPLE}.log \
+            bash -c "
+            echo 'Processing sample ${SAMPLE}' && \
+            OM CODE GOES HERE && \
+            echo 'OM completed for sample ${SAMPLE}' 
+            " &
+    done
+    
+    # Wait for this batch to complete before starting next
+    echo "  Waiting for batch ${BATCH_NUM} to complete..."
+    wait
+    echo "  Batch ${BATCH_NUM} complete!"
+done
+
+# Quick summary
+echo "Summary:"
+echo "  Total samples: ${TOTAL_SAMPLES}"
