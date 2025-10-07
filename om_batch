@@ -19,7 +19,7 @@ module load singularity/3.11.4-nompi
 
 # Calculate batch size based on node capacity
 # For work nodes, estimate that 128 jobs can run concurrently
-BATCH_SIZE=128
+CHUNK_SIZE=128
 
 #===============================#
 # Avoid editing below this line #
@@ -29,33 +29,33 @@ BATCH_SIZE=128
 mkdir -p ${LOGS_DIR}
 mkdir -p ${OUTPUT_DIR}
 
-# Read sample list
-mapfile -t SAMPLES < $SAMPLE_LIST
+# Read PARAMS list
+mapfile -t PARAMS < $PARAMS_LIST
 
-SAMPLES_ARRAY=("${SAMPLES[@]}")
-TOTAL_SAMPLES=${#SAMPLES_ARRAY[@]}
+PARAMS_ARRAY=("${PARAMS[@]}")
+TOTAL_PARAMS=${#PARAMS_ARRAY[@]}
 
-echo "Processing ${TOTAL_SAMPLES} samples in batches of ${BATCH_SIZE}..."
+echo "Processing ${TOTAL_PARAMS} params in chunks of ${CHUNK_SIZE}..."
 
-# Process samples in batches
-for ((i=0; i<${TOTAL_SAMPLES}; i+=BATCH_SIZE)); do
+# Process params in chunks of 128 at a time
+for ((i=0; i<${TOTAL_PARAMS}; i+=CHUNK_SIZE)); do
     BATCH_NUM=$((i/BATCH_SIZE + 1))
     echo "Starting batch ${BATCH_NUM}..."
     
-    # Launch one batch of samples
-    for ((j=i; j<i+BATCH_SIZE && j<${TOTAL_SAMPLES}; j++)); do
-        SAMPLE=${SAMPLES_ARRAY[$j]}
-        echo "Launching sample ${SAMPLE} ($(($j+1))/${TOTAL_SAMPLES})" \        
+    # Launch one batch of PARAMs
+    for ((j=i; j<i+BATCH_SIZE && j<${TOTAL_PARAMS}; j++)); do
+        PARAM=${PARAMS_ARRAY[$j]}
+        echo "Launching param ${PARAM} ($(($j+1))/${TOTAL_PARAMS})" \        
         srun --nodes=1 \
             --ntasks=1 \
             --cpus-per-task=1 \
             --mem=2GB \
-            --output=${LOGS_DIR}/%j_${SAMPLE}.log \
-            --error=${LOGS_DIR}/%j_${SAMPLE}.log \
+            --output=${LOGS_DIR}/%j_${PARAM}.log \
+            --error=${LOGS_DIR}/%j_${PARAM}.log \
             bash -c "
-            echo 'Processing sample ${SAMPLE}' && \
+            echo 'Processing param ${PARAM}' && \
             OM CODE GOES HERE && \
-            echo 'OM completed for sample ${SAMPLE}' 
+            echo 'OM completed for param ${PARAM}' 
             " &
     done
     
@@ -67,4 +67,4 @@ done
 
 # Quick summary
 echo "Summary:"
-echo "  Total samples: ${TOTAL_SAMPLES}"
+echo "  Total params: ${TOTAL_PARAMS}"
