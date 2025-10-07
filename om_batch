@@ -46,8 +46,7 @@ for ((i=0; i<${TOTAL_PARAMS}; i+=CHUNK_SIZE)); do
     for ((j=i; j<i+BATCH_SIZE && j<${TOTAL_PARAMS}; j++)); do
         PARAM=${PARAMS_ARRAY[$j]}
         echo "Launching param ${PARAM} ($(($j+1))/${TOTAL_PARAMS})" \        
-        srun --nodes=1 \
-            --ntasks=1 \
+        srun --ntasks=1 \
             --cpus-per-task=1 \
             --mem=2GB \
             --output=${LOGS_DIR}/%j_${PARAM}.log \
